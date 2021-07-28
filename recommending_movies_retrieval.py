@@ -114,6 +114,6 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01))
 cached_train = train.shuffle(100_000).batch(8192).cache()
 cached_test = test.batch(1024).cache()
 
-model.fit(cached_train, epochs=100)
+model.fit(cached_train, epochs=7)
 
 model.evaluate(cached_test, return_dict=True)

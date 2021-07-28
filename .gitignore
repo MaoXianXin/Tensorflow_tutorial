@@ -4,3 +4,11 @@
 aclImdb/
 
 *.txt
+
+*.csv
+
+*.pb
+
+*.index
+
+*.data-00000-of-00001
