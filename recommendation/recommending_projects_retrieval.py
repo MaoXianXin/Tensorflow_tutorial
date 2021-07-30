@@ -79,3 +79,78 @@ cached_test = test.batch(4096).cache()
 model.fit(cached_train, epochs=3)
 
 model.evaluate(cached_test, return_dict=True)
+
+
+
+# index = tfrs.layers.factorized_top_k.BruteForce(model.user_model)
+# index.index(movies.batch(100).map(model.movie_model), movies)
+#
+# #%%
+#
+# _, titles = index(tf.constant(["XianxinMao"]))
+# print(f"Recommendations for user XianxinMao: {titles[0, :10]}")
+#
+# #%%
+#
+# scann_index = tfrs.layers.factorized_top_k.ScaNN(model.user_model)
+# scann_index.index(movies.batch(100).map(model.movie_model), movies)
+#
+# #%%
+#
+# _, titles = scann_index(tf.constant(["XianxinMao"]))
+# print(f"Recommendations for user XianxinMao: {titles[0, :10]}")
+#
+# #%%
+#
+# export_path = './scann_recommend/1/'
+# tf.keras.models.save_model(
+#     scann_index,
+#     export_path,
+#     overwrite=True,
+#     include_optimizer=True,
+#     save_format=None,
+#     signatures=None,
+#     options=tf.saved_model.SaveOptions(namespace_whitelist=["Scann"])
+# )
+# print("Saved model")
+#
+# #%%
+#
+# for dict_batch in cached_test.take(1):
+#     print(dict_batch)
+#
+# #%%
+#
+# user_id_np = [user.decode("utf-8") for user in dict_batch[:, 0][0:3].numpy()]
+#
+# #%%
+#
+# import json
+# data = json.dumps({"signature_name": "serving_default", "instances": user_id_np})
+# print('Data: {} ... {}'.format(data[:50], data[len(data)-52:]))
+#
+# #%%
+#
+# data
+#
+# #%%
+#
+# import requests
+# headers = {"content-type": "application/json"}
+# json_response = requests.post('http://39.107.108.110:8501/v1/models/scann_recommend:predict', data=data, headers=headers)
+# predictions = json.loads(json_response.text)['predictions']
+#
+# #%%
+#
+# predictions
+#
+# #%%
+#
+# import requests
+# headers = {"content-type": "application/json"}
+# json_response = requests.post('http://39.107.108.110:8501/v1/models/scann_recommend:predict', data=data, headers=headers)
+# predictions = json.loads(json_response.text)['predictions']
+#
+# #%%
+#
+# predictions
