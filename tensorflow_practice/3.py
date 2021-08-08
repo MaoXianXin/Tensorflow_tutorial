@@ -69,8 +69,8 @@ model.compile(
     loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'])
 
-log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-file_writer = tf.summary.create_file_writer(log_dir + 'lr')
+log_dir = "logs/fit/simple_cnn_" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+file_writer = tf.summary.create_file_writer(log_dir + '/lr')
 file_writer.set_as_default()
 early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5,
                                               restore_best_weights=True)
