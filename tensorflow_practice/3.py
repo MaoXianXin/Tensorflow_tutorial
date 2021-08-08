@@ -8,8 +8,30 @@ import datetime
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 from tensorflow.python.keras import backend
 from tensorflow.python.platform import tf_logging as logging
+from custom_augmentation import *
 
 import pathlib
+
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--key", type=str)
+args = parser.parse_args()
+
+batch_size = 128
+img_height = 180
+img_width = 180
+
+augmentation_dict = {
+    'RandomFlip': tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
+    'RandomRotation': tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
+    'RandomContrast': tf.keras.layers.experimental.preprocessing.RandomContrast(0.2),
+    'RandomZoom': tf.keras.layers.experimental.preprocessing.RandomZoom(height_factor=0.1, width_factor=0.1),
+    'RandomTranslation': tf.keras.layers.experimental.preprocessing.RandomTranslation(height_factor=0.1, width_factor=0.1),
+    'RandomCrop': tf.keras.layers.experimental.preprocessing.RandomCrop(img_height, img_width),
+    'RandomFlip_prob': RandomFlip_prob("horizontal_and_vertical"),
+    'RandomRotation_prob': RandomRotation_prob(0.2),
+    'RandomTranslation_prob': RandomTranslation_prob(height_factor=0.1, width_factor=0.1),
+}
 
 dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
 data_dir = tf.keras.utils.get_file(origin=dataset_url,
@@ -19,10 +41,6 @@ data_dir = pathlib.Path(data_dir)
 
 image_count = len(list(data_dir.glob('*/*.jpg')))
 print(image_count)
-
-batch_size = 128
-img_height = 180
-img_width = 180
 
 train_ds = tf.keras.preprocessing.image_dataset_from_directory(
     data_dir,
@@ -52,6 +70,7 @@ num_classes = 5
 
 model = tf.keras.Sequential([
     tf.keras.layers.experimental.preprocessing.Rescaling(1. / 255),
+    augmentation_dict[args.key],
     tf.keras.layers.Conv2D(32, 3, activation='relu'),
     tf.keras.layers.MaxPooling2D(),
     tf.keras.layers.Conv2D(32, 3, activation='relu'),
@@ -69,7 +88,7 @@ model.compile(
     loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'])
 
-log_dir = "logs/fit/simple_cnn_" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+log_dir = "logs/fit/simple_cnn_" + str(args.key) + '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 file_writer = tf.summary.create_file_writer(log_dir + '/lr')
 file_writer.set_as_default()
 early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5,
@@ -117,7 +136,7 @@ reduce_lr = MyCallback(monitor='val_loss', factor=0.2,
 model.fit(
     train_ds,
     validation_data=val_ds,
-    epochs=30,
+    epochs=100,
     callbacks=[reduce_lr, early_stop, tensorboard_callback],
     verbose=2
 )
