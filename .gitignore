@@ -12,3 +12,5 @@ aclImdb/
 *.index
 
 *.data-00000-of-00001
+
+tensorflow_practice/logs
