@@ -20,6 +20,7 @@ args = parser.parse_args()
 batch_size = 128
 img_height = 180
 img_width = 180
+img_size = (img_height, img_width, 3)
 
 augmentation_dict = {
     'RandomFlip': tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
@@ -68,19 +69,25 @@ val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 num_classes = 5
 
-model = tf.keras.Sequential([
-    tf.keras.layers.experimental.preprocessing.Rescaling(1. / 255),
+data_augmentation = tf.keras.Sequential([
     augmentation_dict[args.key],
-    tf.keras.layers.Conv2D(32, 3, activation='relu'),
-    tf.keras.layers.MaxPooling2D(),
-    tf.keras.layers.Conv2D(32, 3, activation='relu'),
-    tf.keras.layers.MaxPooling2D(),
-    tf.keras.layers.Conv2D(32, 3, activation='relu'),
-    tf.keras.layers.MaxPooling2D(),
-    tf.keras.layers.Flatten(),
-    tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dense(num_classes)
 ])
+
+preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
+base_model = tf.keras.applications.MobileNetV2(input_shape=img_size,
+                                               include_top=False,
+                                               weights='imagenet')
+base_model.trainable = False
+
+inputs = tf.keras.Input(shape=img_size)
+x = data_augmentation(inputs)
+x = preprocess_input(x)
+x = base_model(x, training=False)
+x = tf.keras.layers.GlobalAveragePooling2D()(x)
+x = tf.keras.layers.Dropout(0.2)(x)
+outputs = tf.keras.layers.Dense(num_classes)(x)
+model = tf.keras.Model(inputs, outputs)
+print(model.summary())
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 model.compile(
@@ -88,7 +95,7 @@ model.compile(
     loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'])
 
-log_dir = "logs/fit/simple_cnn_" + str(args.key) + '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+log_dir = "logs/fit_2/mobilenetv2_" + str(args.key) + '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 file_writer = tf.summary.create_file_writer(log_dir + '/lr')
 file_writer.set_as_default()
 early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5,
