@@ -16,7 +16,7 @@ import pathlib
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--key", type=str)
+parser.add_argument("--key", type=str, default='RandomFlip')
 args = parser.parse_args()
 
 batch_size = 128
@@ -37,42 +37,21 @@ augmentation_dict = {
     'RandomTranslation_prob': RandomTranslation_prob(height_factor=0.1, width_factor=0.1),
 }
 
-dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
-data_dir = tf.keras.utils.get_file(origin=dataset_url,
-                                   fname='flower_photos',
-                                   untar=True)
-data_dir = pathlib.Path(data_dir)
+(test_ds, train_ds, val_ds), metadata = tfds.load('visual_domain_decathlon/cifar100',
+                                                  split=['test', 'train', 'validation'], with_info=True,
+                                                  as_supervised=True)
 
-image_count = len(list(data_dir.glob('*/*.jpg')))
-print(image_count)
-
-train_ds = tf.keras.preprocessing.image_dataset_from_directory(
-    data_dir,
-    validation_split=0.2,
-    subset="training",
-    seed=123,
-    image_size=(img_height, img_width),
-    batch_size=batch_size)
-
-val_ds = tf.keras.preprocessing.image_dataset_from_directory(
-    data_dir,
-    validation_split=0.2,
-    subset="validation",
-    seed=123,
-    image_size=(img_height, img_width),
-    batch_size=batch_size)
-
-class_names = train_ds.class_names
-print(class_names)
+num_classes = metadata.features['label'].num_classes
+print(num_classes)
 
 AUTOTUNE = tf.data.AUTOTUNE
 
-train_ds = train_ds.shuffle(buffer_size=1000).cache().prefetch(buffer_size=AUTOTUNE)
-val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
+train_ds = train_ds.shuffle(buffer_size=1000).batch(batch_size=batch_size).cache().prefetch(buffer_size=AUTOTUNE)
+val_ds = val_ds.batch(batch_size=batch_size).cache().prefetch(buffer_size=AUTOTUNE)
 
-num_classes = 5
 
 data_augmentation = tf.keras.Sequential([
+    tf.keras.layers.experimental.preprocessing.Resizing(img_height, img_width),
     augmentation_dict[args.key],
 ])
 
@@ -99,7 +78,7 @@ x = tf.keras.layers.GlobalAveragePooling2D()(x)
 x = tf.keras.layers.Dropout(0.2)(x)
 outputs = tf.keras.layers.Dense(num_classes)(x)
 model = tf.keras.Model(inputs, outputs)
-model.load_weights('./save_models')
+model.load_weights('./save_model/my_model')
 print(model.summary())
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
