@@ -9,9 +9,13 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau
 from tensorflow.python.keras import backend
 from tensorflow.python.platform import tf_logging as logging
 from custom_augmentation import *
-
+from imgaug import augmenters as iaa
+import imgaug as ia
 import pathlib
 
+tfds.disable_progress_bar()
+tf.random.set_seed(42)
+ia.seed(42)
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -22,6 +26,17 @@ batch_size = 128
 img_height = 180
 img_width = 180
 img_size = (img_height, img_width, 3)
+
+rand_aug = iaa.RandAugment(n=3, m=7)
+
+
+def augment(images):
+    # Input to `augment()` is a TensorFlow tensor which
+    # is not supported by `imgaug`. This is why we first
+    # convert it to its `numpy` variant.
+    images = tf.cast(images, tf.uint8)
+    return rand_aug(images=images.numpy())
+
 
 augmentation_dict = {
     'RandomFlip': tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
@@ -45,18 +60,20 @@ print(num_classes)
 
 AUTOTUNE = tf.data.AUTOTUNE
 
-train_ds = train_ds.shuffle(buffer_size=1000).batch(batch_size=batch_size).cache().prefetch(buffer_size=AUTOTUNE)
-val_ds = val_ds.batch(batch_size=batch_size).cache().prefetch(buffer_size=AUTOTUNE)
+train_ds = train_ds.shuffle(buffer_size=len(train_ds)).cache().batch(batch_size).map(
+    lambda x, y: (tf.py_function(augment, [x], [tf.float32])[0], y), num_parallel_calls=AUTOTUNE).prefetch(
+    buffer_size=AUTOTUNE)
+val_ds = val_ds.cache().batch(batch_size).prefetch(buffer_size=AUTOTUNE)
 
 data_augmentation = tf.keras.Sequential([
     tf.keras.layers.experimental.preprocessing.Resizing(img_height, img_width),
     # augmentation_dict[args.key],
 ])
 
-preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
-base_model = tf.keras.applications.MobileNetV2(input_shape=img_size,
-                                               include_top=False,
-                                               weights='imagenet')
+preprocess_input = tf.keras.applications.resnet.preprocess_input
+base_model = tf.keras.applications.ResNet101(input_shape=img_size,
+                                             include_top=False,
+                                             weights='imagenet')
 base_model.trainable = False
 
 inputs = tf.keras.Input(shape=img_size)
@@ -75,7 +92,7 @@ model.compile(
     loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'])
 
-log_dir = "logs/fit_2/mobilenetv2_" + str(args.key) + '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+log_dir = "logs/fit_2/ResNet101_" + str(args.key) + '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 file_writer = tf.summary.create_file_writer(log_dir + '/lr')
 file_writer.set_as_default()
 early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5,
@@ -129,4 +146,4 @@ model.fit(
 )
 
 print(model.evaluate(val_ds))
-model.save("save_model/my_model")
+model.save("save_model/my_model_2")
