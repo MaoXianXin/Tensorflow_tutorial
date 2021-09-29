@@ -14,3 +14,13 @@ aclImdb/
 *.data-00000-of-00001
 
 tensorflow_practice/logs
+
+*.tgz
+
+*.meta
+
+*.bmp
+
+*.pbtxt
+
+*.tflite
