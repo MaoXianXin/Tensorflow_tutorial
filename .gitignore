@@ -24,3 +24,7 @@ tensorflow_practice/logs
 *.pbtxt
 
 *.tflite
+
+*.jpg
+
+*.png
