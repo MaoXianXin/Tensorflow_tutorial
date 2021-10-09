@@ -1,6 +1,7 @@
 import numpy as np
 import os
 
+from tflite_model_maker.config import QuantizationConfig
 from tflite_model_maker.config import ExportFormat
 from tflite_model_maker import model_spec
 from tflite_model_maker import object_detector
@@ -14,26 +15,27 @@ from absl import logging
 
 logging.set_verbosity(logging.ERROR)
 
-spec = model_spec.get('efficientdet_lite0')
+spec = model_spec.get('efficientdet_lite4')
 
 train_data, validation_data, test_data = object_detector.DataLoader.from_csv(
     './dataset.csv')
 
-model = object_detector.create(train_data, model_spec=spec, batch_size=8, train_whole_model=True, epochs=50,
+model = object_detector.create(train_data, model_spec=spec, batch_size=4, train_whole_model=True, epochs=1,
                                validation_data=validation_data)
 
-model.evaluate(test_data)
+print(model.evaluate(test_data, batch_size=4))
 
-model.export(export_dir='./tfliteObj')
+config = QuantizationConfig.for_float16()
+model.export(export_dir='./tfliteObj', tflite_filename='model_fp16.tflite', quantization_config=config)
 
-# model.evaluate_tflite('./tfliteObj/model.tflite', test_data)
+print(model.evaluate_tflite('./tfliteObj/model_fp16.tflite', test_data))
 
 
 import cv2
 
 from PIL import Image
 
-model_path = './tfliteObj/model.tflite'
+model_path = './tfliteObj/model_fp16.tflite'
 
 # Load the labels into a list
 classes = ['???'] * model.model_spec.config.num_classes
@@ -68,7 +70,7 @@ def get_output_tensor(interpreter, index):
     """Returns the output tensor at the given index."""
     # print(interpreter.get_output_details())
     output_details = interpreter.get_output_details()[index]
-    print(output_details)
+    # print(output_details)
     tensor = np.squeeze(interpreter.get_tensor(output_details['index']))
     return tensor
 
@@ -81,13 +83,13 @@ def detect_objects(interpreter, image, threshold):
 
     # Get all outputs from the model
     scores = get_output_tensor(interpreter, 0)
-    print(scores)
+    # print(scores)
     boxes = get_output_tensor(interpreter, 1)
-    print(boxes)
+    # print(boxes)
     count = int(get_output_tensor(interpreter, 2))
-    print(count)
+    # print(count)
     classes = get_output_tensor(interpreter, 3)
-    print(classes)
+    # print(classes)
 
     results = []
     for i in range(count):
@@ -148,9 +150,9 @@ DETECTION_THRESHOLD = 0.5
 
 TEMP_FILE = './3916261642_0a504acd60_o.jpg'
 
-im = Image.open(TEMP_FILE)
-im.thumbnail((512, 512), Image.ANTIALIAS)
-im.save(TEMP_FILE, 'PNG')
+# im = Image.open(TEMP_FILE)
+# im.thumbnail((512, 512), Image.ANTIALIAS)
+# im.save(TEMP_FILE, 'PNG')
 
 # Load the TFLite model
 interpreter = tf.lite.Interpreter(model_path=model_path)
