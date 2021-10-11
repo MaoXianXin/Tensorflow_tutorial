@@ -54,10 +54,10 @@ def detect(input_tensor, inference_count=3):
     # Repeatedly using previous detection result to identify the region of
     # interest and only croping that region to improve detection accuracy
     for _ in range(inference_count - 1):
-        keypoint_with_scores = movenet.detect(input_tensor.numpy(),
+        keypoints_with_scores = movenet.detect(input_tensor.numpy(),
                                               reset_crop_region=False)
 
-    return keypoint_with_scores
+    return keypoints_with_scores
 
 
 def draw_prediction_on_image(
@@ -227,10 +227,10 @@ class MoveNetPreprocessor(object):
                         self._messages.append('Skipped ' + image_path +
                                               '. Image isn\'t in RGB format.')
                         continue
-                    keypoint_with_scores = detect(image)
+                    keypoints_with_scores = detect(image)
 
                     # Save landmarks if all landmarks were detected
-                    min_landmark_score = np.amin(keypoint_with_scores[:2])
+                    min_landmark_score = np.amin(keypoints_with_scores[:2])
                     should_keep_image = min_landmark_score >= detection_threshold
                     if not should_keep_image:
                         self._messages.append('Skipped ' + image_path +
@@ -239,7 +239,7 @@ class MoveNetPreprocessor(object):
 
                     # Draw the prediction result on top of the image for debugging later
                     output_overlay = draw_prediction_on_image(
-                        image.numpy().astype(np.uint8), keypoint_with_scores,
+                        image.numpy().astype(np.uint8), keypoints_with_scores,
                         crop_region=None, close_figure=True, keep_input_size=True)
 
                     # Write detection result to into an image file
@@ -249,7 +249,7 @@ class MoveNetPreprocessor(object):
                     # Get landmarks and scale it to the same size as the input image
                     pose_landmarks = np.array(
                         [[lmk[0] * image_width, lmk[1] * image_height, lmk[2]]
-                         for lmk in keypoint_with_scores],
+                         for lmk in keypoints_with_scores],
                         dtype=np.float32)
 
                     # Write the landmark coordinates to its per-class CSV file
@@ -311,8 +311,8 @@ class MoveNetPreprocessor(object):
 # if len(test_image_url):
 #     image = tf.io.read_file(test_image_url)
 #     image = tf.io.decode_jpeg(image)
-#     keypoint_with_scores = detect(image)
-#     save_image = draw_prediction_on_image(image, keypoint_with_scores, crop_region=None,
+#     keypoints_with_scores = detect(image)
+#     save_image = draw_prediction_on_image(image, keypoints_with_scores, crop_region=None,
 #                                           close_figure=False, keep_input_size=True)
 #     print(save_image)
 #
