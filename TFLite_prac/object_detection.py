@@ -15,7 +15,7 @@ from absl import logging
 
 logging.set_verbosity(logging.ERROR)
 
-spec = model_spec.get('efficientdet_lite4')
+spec = model_spec.get('efficientdet_lite0')
 
 train_data, validation_data, test_data = object_detector.DataLoader.from_csv(
     './dataset.csv')
@@ -29,7 +29,6 @@ config = QuantizationConfig.for_float16()
 model.export(export_dir='./tfliteObj', tflite_filename='model_fp16.tflite', quantization_config=config)
 
 print(model.evaluate_tflite('./tfliteObj/model_fp16.tflite', test_data))
-
 
 import cv2
 
@@ -167,3 +166,4 @@ detection_result_image = run_odt_and_draw_results(
 
 # Show the detection result
 Image.fromarray(detection_result_image).save('result4.png')
+print('tensorflow version: ', tf.__version__)
