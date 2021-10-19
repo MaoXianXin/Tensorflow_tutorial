@@ -1,5 +1,3 @@
-import time
-
 import tensorflow as tf
 import tensorflow_hub as hub
 
@@ -194,11 +192,9 @@ labels_file = "https://storage.googleapis.com/download.tensorflow.org/data/Image
 downloaded_file = tf.keras.utils.get_file("labels.txt", origin=labels_file)
 
 classes = []
-i = 0
 with open(downloaded_file) as f:
     labels = f.readlines()
-    classes = [l.strip() for l in labels[1:]]
-    i += 1
+    classes = [l.strip() for l in labels]
 
 image_name = "turtle"  # @param ['tiger', 'bus', 'car', 'cat', 'dog', 'apple', 'banana', 'turtle', 'flamingo', 'piano', 'honeycomb', 'teapot']
 
@@ -234,17 +230,14 @@ image, original_image = load_image(img_url, image_size, dynamic_size, max_dynami
 show_image(image, 'Scaled image')
 
 classifier = hub.load(model_handle)
+
 input_shape = image.shape
 warmup_input = tf.random.uniform(input_shape, 0, 1.0)
-star_time = time.time()
 warmup_logits = classifier(warmup_input).numpy()
-end_time = time.time()
-print("Elapsed time:", end_time - star_time)
 
-star_time = time.time()
+# Run model on image
 probabilities = tf.nn.softmax(classifier(image)).numpy()
-end_time = time.time()
-print("Elapsed time:", end_time - star_time)
+
 top_5 = tf.argsort(probabilities, axis=-1, direction="DESCENDING")[0][:5].numpy()
 np_classes = np.array(classes)
 
@@ -253,7 +246,7 @@ np_classes = np.array(classes)
 includes_background_class = probabilities.shape[1] == 1001
 
 for i, item in enumerate(top_5):
-    class_index = item if not includes_background_class else item - 1
+    class_index = item if includes_background_class else item + 1
     line = f'({i + 1}) {class_index:4} - {classes[class_index]}: {probabilities[0][top_5][i]}'
     print(line)
 
