@@ -28,3 +28,27 @@ tensorflow_practice/logs
 *.jpg
 
 *.png
+
+*.gif
+
+*.avi
+
+*.tsv
+
+TF_Hub/NLP/index
+
+*.mapping
+
+*.ogv
+
+*.jpeg
+
+*.vec
+
+*.gz
+
+*.zip
+
+*.tfrecords
+
+TF_Hub/NLP/random_projection_matrix
