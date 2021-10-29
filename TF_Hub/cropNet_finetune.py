@@ -174,8 +174,8 @@ def show_confusion_matrix(cm, labels):
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, xticklabels=labels, yticklabels=labels,
                 annot=True, fmt='g')
-    plt.xlabel('Prediction')
-    plt.ylabel('Label')
+    plt.xlabel('Label')
+    plt.ylabel('Prediction')
     plt.show()
 
 
