@@ -174,14 +174,14 @@ def show_confusion_matrix(cm, labels):
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, xticklabels=labels, yticklabels=labels,
                 annot=True, fmt='g')
-    plt.xlabel('Label')
-    plt.ylabel('Prediction')
+    plt.xlabel('Prediction')
+    plt.ylabel('Label')
     plt.show()
 
 
 confusion_mtx = tf.math.confusion_matrix(
-    predict_class_label_number(test_data),
     list(ds_test.map(lambda x, y: y)),
+    predict_class_label_number(test_data),
     num_classes=len(label_names))
 
 show_confusion_matrix(confusion_mtx, label_names)
@@ -189,8 +189,8 @@ show_confusion_matrix(confusion_mtx, label_names)
 model.evaluate(unknown_test_data)
 
 unknown_confusion_mtx = tf.math.confusion_matrix(
-    predict_class_label_number(unknown_test_data),
     list(ds_unknown_test.map(lambda x, y: y)),
+    predict_class_label_number(unknown_test_data),
     num_classes=len(label_names))
 
 show_confusion_matrix(unknown_confusion_mtx, label_names)
