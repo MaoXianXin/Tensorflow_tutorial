@@ -9,12 +9,17 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau
 from tensorflow.python.keras import backend
 from tensorflow.python.platform import tf_logging as logging
 from custom_augmentation import *
-
+from imgaug import augmenters as iaa
+import imgaug as ia
 import pathlib
 
+tfds.disable_progress_bar()
+tf.random.set_seed(42)
+ia.seed(42)
 import argparse
+
 parser = argparse.ArgumentParser()
-parser.add_argument("--key", type=str)
+parser.add_argument("--key", type=str, default='RandomFlip')
 args = parser.parse_args()
 
 batch_size = 128
@@ -22,61 +27,53 @@ img_height = 180
 img_width = 180
 img_size = (img_height, img_width, 3)
 
+rand_aug = iaa.RandAugment(n=3, m=7)
+
+
+def augment(images):
+    # Input to `augment()` is a TensorFlow tensor which
+    # is not supported by `imgaug`. This is why we first
+    # convert it to its `numpy` variant.
+    images = tf.cast(images, tf.uint8)
+    return rand_aug(images=images.numpy())
+
+
 augmentation_dict = {
     'RandomFlip': tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
     'RandomRotation': tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
     'RandomContrast': tf.keras.layers.experimental.preprocessing.RandomContrast(0.2),
     'RandomZoom': tf.keras.layers.experimental.preprocessing.RandomZoom(height_factor=0.1, width_factor=0.1),
-    'RandomTranslation': tf.keras.layers.experimental.preprocessing.RandomTranslation(height_factor=0.1, width_factor=0.1),
+    'RandomTranslation': tf.keras.layers.experimental.preprocessing.RandomTranslation(height_factor=0.1,
+                                                                                      width_factor=0.1),
     'RandomCrop': tf.keras.layers.experimental.preprocessing.RandomCrop(img_height, img_width),
     'RandomFlip_prob': RandomFlip_prob("horizontal_and_vertical"),
     'RandomRotation_prob': RandomRotation_prob(0.2),
     'RandomTranslation_prob': RandomTranslation_prob(height_factor=0.1, width_factor=0.1),
 }
 
-dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
-data_dir = tf.keras.utils.get_file(origin=dataset_url,
-                                   fname='flower_photos',
-                                   untar=True)
-data_dir = pathlib.Path(data_dir)
+(test_ds, train_ds, val_ds), metadata = tfds.load('visual_domain_decathlon/cifar100',
+                                                  split=['test', 'train', 'validation'], with_info=True,
+                                                  as_supervised=True)
 
-image_count = len(list(data_dir.glob('*/*.jpg')))
-print(image_count)
-
-train_ds = tf.keras.preprocessing.image_dataset_from_directory(
-    data_dir,
-    validation_split=0.2,
-    subset="training",
-    seed=123,
-    image_size=(img_height, img_width),
-    batch_size=batch_size)
-
-val_ds = tf.keras.preprocessing.image_dataset_from_directory(
-    data_dir,
-    validation_split=0.2,
-    subset="validation",
-    seed=123,
-    image_size=(img_height, img_width),
-    batch_size=batch_size)
-
-class_names = train_ds.class_names
-print(class_names)
+num_classes = metadata.features['label'].num_classes
+print(num_classes)
 
 AUTOTUNE = tf.data.AUTOTUNE
 
-train_ds = train_ds.shuffle(buffer_size=1000).cache().prefetch(buffer_size=AUTOTUNE)
-val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
-
-num_classes = 5
+train_ds = train_ds.shuffle(buffer_size=len(train_ds)).cache().batch(batch_size).map(
+    lambda x, y: (tf.py_function(augment, [x], [tf.float32])[0], y), num_parallel_calls=AUTOTUNE).prefetch(
+    buffer_size=AUTOTUNE)
+val_ds = val_ds.cache().batch(batch_size).prefetch(buffer_size=AUTOTUNE)
 
 data_augmentation = tf.keras.Sequential([
-    augmentation_dict[args.key],
+    tf.keras.layers.experimental.preprocessing.Resizing(img_height, img_width),
+    # augmentation_dict[args.key],
 ])
 
-preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
-base_model = tf.keras.applications.MobileNetV2(input_shape=img_size,
-                                               include_top=False,
-                                               weights='imagenet')
+preprocess_input = tf.keras.applications.resnet.preprocess_input
+base_model = tf.keras.applications.ResNet101(input_shape=img_size,
+                                             include_top=False,
+                                             weights='imagenet')
 base_model.trainable = False
 
 inputs = tf.keras.Input(shape=img_size)
@@ -95,7 +92,7 @@ model.compile(
     loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'])
 
-log_dir = "logs/fit_2/mobilenetv2_" + str(args.key) + '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+log_dir = "logs/fit_2/ResNet101_" + str(args.key) + '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 file_writer = tf.summary.create_file_writer(log_dir + '/lr')
 file_writer.set_as_default()
 early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5,
@@ -149,3 +146,4 @@ model.fit(
 )
 
 print(model.evaluate(val_ds))
+model.save("save_model/my_model_2")
