@@ -42,7 +42,7 @@ def get_domain_data(domain, data_file):
             ai_index.append(i)
 
     ai_data = data.iloc[ai_index, :]
-    ai_data.to_csv('ai_data.csv', index=False)
+    ai_data.to_csv('./domain/' + domain + '.csv', index=False)
 
 
 def get_keyword_list(data_file):
@@ -70,7 +70,7 @@ def get_keyword_list(data_file):
     stopword = stopwords.words('english')
     fields = ['keyword']
     rows = [[keyword] for keyword in keyword_list if keyword.lower() not in stopword]
-    with open('ai_keyword.csv', 'w', encoding='utf8') as f:
+    with open('./keyword/' + domain + '_keyword.csv', 'w', encoding='utf8') as f:
         # using csv.writer method from CSV package
         write = csv.writer(f)
 
@@ -78,12 +78,15 @@ def get_keyword_list(data_file):
         write.writerows(rows)
 
 
-data_file = '/home/csdn/Downloads/arxiv-metadata-oai-snapshot.json'
-convert_df2csv(data_file)
+# data_file = '/home/csdn/Downloads/arxiv-metadata-oai-snapshot.json'
+# convert_df2csv(data_file)
 
-domain = 'cs.AI'
-data_file = 'data.csv'
-get_domain_data(domain, data_file)
+domain_csv = pd.read_csv('df_taxonomy.csv')
+domain_list = list(domain_csv['categories'].unique())
 
-data_file = 'ai_data.csv'
-get_keyword_list(data_file)
+for domain in domain_list:
+    data_file = 'data.csv'
+    get_domain_data(domain, data_file)
+
+    data_file = './domain/' + domain + '.csv'
+    get_keyword_list(data_file)
