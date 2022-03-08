@@ -1,30 +1,27 @@
-import random
-import hashlib
-import urllib
 import requests
 import json  # 安装相应的库
 
-src = 'en'  # 翻译的源语言
-obj = 'zh'  # 翻译的目标语言
-appid = '20220304001110302'  # 这里输入你注册后得到的appid
-secretKey = 'nT75jNiwQylE1jAwkcTT'  # 这里输入你注册后得到的密匙
+token = '24.e8e885ceca73fb790397209393485cf3.2592000.1649314375.282335-25725808'
+url = 'https://aip.baidubce.com/rpc/2.0/mt/texttrans/v1?access_token=' + token
 
-myurl = 'http://api.fanyi.baidu.com/api/trans/vip/translate'  # 必须加上的头
+# For list of language codes, please refer to `https://ai.baidu.com/ai-doc/MT/4kqryjku9#语种列表`
+from_lang = 'en'  # example: en
+to_lang = 'zh'  # example: zh
+term_ids = ''  # 术语库id，多个逗号隔开
+
+headers = {'Content-Type': 'application/json'}
 
 
 def translate(word):
-    salt = random.randint(31256, 66253)  # 产生随计数
+    payload = {'q': word, 'from': from_lang, 'to': to_lang, 'termIds': term_ids}
 
-    sign = appid + word + str(salt) + secretKey  # 文档的step1拼接字符串
-    m1 = hashlib.md5()
-    m1.update(sign.encode('utf-8'))
-    sign = m1.hexdigest()  # 文档的step2计算签名
-    myur1 = myurl + '?q=' + urllib.parse.quote(
-        word) + '&from=' + src + '&to=' + obj + '&appid=' + appid + '&salt=' + str(salt) + '&sign=' + sign
-    print(myur1)  # 生成的url并打印出来
-    english_data = requests.get(myur1)  # 请求url
-    js_data = json.loads(english_data.text)  # 下载json数据
-    content = js_data['trans_result'][0]['dst']  # 提取json数据里面的dst
+    # Send request
+    r = requests.post(url, params=payload, headers=headers)
+    result = r.json()
+
+    # Show response
+    js_data = json.loads(json.dumps(result, indent=4, ensure_ascii=False))
+    content = js_data['result']['trans_result'][0]['dst']  # 提取json数据里面的dst
     return content
 
 
@@ -50,3 +47,7 @@ def custom_translate(text):
         text = translate(text)
         text = '- ' + text[1:]
         return text
+
+
+# translate_result = translate(word="Most %Spring Boot% applications need very little Spring configuration.")
+# print(translate_result.replace('%', ' '))
