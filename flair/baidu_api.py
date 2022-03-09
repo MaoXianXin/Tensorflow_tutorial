@@ -1,17 +1,34 @@
 import requests
-import json  # 安装相应的库
+import json
+import re
 
-token = '24.e8e885ceca73fb790397209393485cf3.2592000.1649314375.282335-25725808'
+# 设置access token，以及请求的api地址
+token = '24.ad76439c7722c0c0680048421fd4c2a1.2592000.1649331835.282335-25728895'
 url = 'https://aip.baidubce.com/rpc/2.0/mt/texttrans/v1?access_token=' + token
 
-# For list of language codes, please refer to `https://ai.baidu.com/ai-doc/MT/4kqryjku9#语种列表`
-from_lang = 'en'  # example: en
-to_lang = 'zh'  # example: zh
+# 设置翻译的源语言，以及目标语言
+from_lang = 'en'
+to_lang = 'zh'
 term_ids = ''  # 术语库id，多个逗号隔开
 
 headers = {'Content-Type': 'application/json'}
 
 
+def preprocess_text(line, tech_term_list, term2integer):
+    for term in tech_term_list:
+        if line.find(term) != -1:
+            line = re.sub(term, term2integer[term], line)
+    return line
+
+
+def post_preprocess_text(translate_result, integer_list, integer2term):
+    for integer_str in integer_list:
+        if translate_result.find(integer_str) != -1:
+            translate_result = re.sub(integer_str, integer2term[integer_str], translate_result)
+    return translate_result
+
+
+# 把一段文本传送给百度翻译接口进行翻译，并取回翻译结果
 def translate(word):
     payload = {'q': word, 'from': from_lang, 'to': to_lang, 'termIds': term_ids}
 
@@ -25,6 +42,7 @@ def translate(word):
     return content
 
 
+# 需要经过特殊处理的文本串，再转送翻译
 def custom_translate(text):
     if text.strip().startswith('**'):
         return translate(text)
@@ -39,8 +57,12 @@ def custom_translate(text):
 
     if text.strip().startswith('#'):
         text = translate(text)
-        index = text.rfind('#')
-        text = text[:index + 1] + ' ' + text[index + 1:]
+        for i in range(len(text)):
+            if text[i] != '#':
+                break
+        text = text[:i] + ' ' + text[i:]
+        if text.find('#u') != -1:
+            text = re.sub('#u', '# ', text)
         return text
 
     if text.strip().startswith('-'):
@@ -48,6 +70,25 @@ def custom_translate(text):
         text = '- ' + text[1:]
         return text
 
+    if '`' in text:
+        p1 = re.compile(r'[`](.*?)[`]', re.S)  # 最小匹配
+        tech_term_list = re.findall(p1, text)
+        tech_term_list = ['`' + term + '`' for term in tech_term_list]
+        term2integer = {}
+        integer2term = {}
+        integer_list = []
+        for i in range(len(tech_term_list)):
+            term2integer[tech_term_list[i]] = str(i + 10000)
+            integer2term[str(i + 10000)] = tech_term_list[i]
+            integer_list.append(str(i + 10000))
+        text = preprocess_text(text, tech_term_list, term2integer)
+        text = translate(text)
+        text = post_preprocess_text(text, integer_list, integer2term)
+        if text.find('`*`*`*`') != -1:
+            text = text.replace('`*`*`*`', '`*`')
+        return text
 
-# translate_result = translate(word="Most %Spring Boot% applications need very little Spring configuration.")
-# print(translate_result.replace('%', ' '))
+
+translate_result = custom_translate(
+    text="### [Code Conventions and Housekeeping](#_code_conventions_and_housekeeping)")
+print(translate_result)

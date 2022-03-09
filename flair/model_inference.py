@@ -7,11 +7,11 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--term_csv', default='cv_termv0.1.csv', type=str)
 parser.add_argument("--data_source", default="/home/csdn/Downloads/Tensorflow_tutorial/spaCy/domain/cs.CV.csv", type=str)
+parser.add_argument("--model_save_dir", default="resources/taggers/", type=str)
 args = parser.parse_args()
 
 # load the trained model
-model = SequenceTagger.load(
-    '/home/csdn/Downloads/Tensorflow_tutorial/flair/resources/taggers/sota-ner-flert/final-model.pt')
+model = SequenceTagger.load(args.model_save_dir)
 
 # 使用的数据源是Arxiv论文的CV领域
 abstract_csv = pd.read_csv(args.data_source)
