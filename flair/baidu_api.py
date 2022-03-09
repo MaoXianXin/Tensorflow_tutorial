@@ -14,6 +14,7 @@ term_ids = ''  # 术语库id，多个逗号隔开
 headers = {'Content-Type': 'application/json'}
 
 
+# 把不翻译的内容映射成数字字符串
 def preprocess_text(line, tech_term_list, term2integer):
     for term in tech_term_list:
         if line.find(term) != -1:
@@ -21,6 +22,7 @@ def preprocess_text(line, tech_term_list, term2integer):
     return line
 
 
+# 因为数字字符串是不会被翻译的，所以拿到翻译结果后，我们反向映射回原始内容
 def post_preprocess_text(translate_result, integer_list, integer2term):
     for integer_str in integer_list:
         if translate_result.find(integer_str) != -1:
@@ -56,13 +58,22 @@ def custom_translate(text):
         return text
 
     if text.strip().startswith('#'):
+        p1 = re.compile(r'[(](.*?)[)]', re.S)  # 最小匹配
+        tech_term_list = re.findall(p1, text)
+        term2integer = {}
+        integer2term = {}
+        integer_list = []
+        for i in range(len(tech_term_list)):
+            term2integer[tech_term_list[i]] = str(i + 10000)
+            integer2term[str(i + 10000)] = tech_term_list[i]
+            integer_list.append(str(i + 10000))
+        text = preprocess_text(text, tech_term_list, term2integer)
         text = translate(text)
+        text = post_preprocess_text(text, integer_list, integer2term)
         for i in range(len(text)):
             if text[i] != '#':
                 break
         text = text[:i] + ' ' + text[i:]
-        if text.find('#u') != -1:
-            text = re.sub('#u', '# ', text)
         return text
 
     if text.strip().startswith('-'):
@@ -88,7 +99,6 @@ def custom_translate(text):
             text = text.replace('`*`*`*`', '`*`')
         return text
 
-
-translate_result = custom_translate(
-    text="### [Code Conventions and Housekeeping](#_code_conventions_and_housekeeping)")
-print(translate_result)
+# translate_result = custom_translate(
+#     text="## [Flattening the POMs](#_flattening_the_poms)")
+# print(translate_result)
