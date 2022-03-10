@@ -55,7 +55,7 @@ def custom_translate(text):
         return text
 
     if text.strip().startswith('['):
-        return text
+        return translate(text)
 
     if text.strip().startswith('#'):
         p1 = re.compile(r'[(](.*?)[)]', re.S)  # 最小匹配

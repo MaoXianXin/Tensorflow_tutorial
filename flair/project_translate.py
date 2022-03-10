@@ -9,12 +9,18 @@ from concurrent.futures import ThreadPoolExecutor
 from collections import Iterator
 import re
 import unicodedata
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--project_folder', default='/home/csdn/Pictures/spring/docs/en/spring-cloud/', type=str)
+# parser.add_argument("--save_folder_name", default='/home/csdn/Pictures/translate_folder/test_folder/', type=str)
+parser.add_argument("--tech_term_csv", default='/home/csdn/Documents/data_center/dict_project/tech_term.csv', type=str)
+args = parser.parse_args()
 
 start = time.time()
-project_folder = '/home/csdn/Pictures/spring/docs/en/spring-cloud/'
-save_folder_name = '/home/csdn/Pictures/translate_folder/test_folder/'
+project_folder = args.project_folder
+# save_folder_name = args.save_folder_name
 md_files = glob.glob(project_folder + '**/*.md', recursive=True)
-tech_term = pd.read_csv('/home/csdn/Documents/data_center/dict_project/tech_term.csv')
+tech_term = pd.read_csv(args.tech_term_csv)
 tech_term_list = list(set(tech_term['origin']))
 tech_term_dict = {}
 for term in tech_term_list:
@@ -55,7 +61,7 @@ def translate_task(md_file):
     ch_lines = []
     flag = 0
     # 开启线程池
-    with ThreadPoolExecutor(max_workers=25) as pool:
+    with ThreadPoolExecutor(max_workers=50) as pool:
         for line in en_lines:
             # 代码块不翻译
             if line.startswith('```') and flag == 0:
@@ -87,9 +93,10 @@ def translate_task(md_file):
                 else:
                     ch_lines.append(line)
 
-    text_dir = save_folder_name + project_folder.split('/')[-1] + '/'
-    if not os.path.exists(text_dir):
-        os.makedirs(text_dir)
+    # text_dir = save_folder_name + project_folder.split('/')[-1] + '/'
+    # if not os.path.exists(text_dir):
+    #     os.makedirs(text_dir)
+    text_dir = '/'.join(md_file.split('/')[:-1]) + '/'
 
     textfile = open(text_dir + md_file.split('/')[-1].split('.')[0] + ".txt", "w")
     for element in ch_lines:
