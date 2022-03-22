@@ -85,7 +85,7 @@ up_stack = [
     pix2pix.upsample(512, 3),  # 4x4 -> 8x8
     pix2pix.upsample(256, 3),  # 8x8 -> 16x16
     pix2pix.upsample(128, 3),  # 16x16 -> 32x32
-    pix2pix.upsample(64, 3),  # 32x32 -> 64x64
+    pix2pix.upsample(64, 3),   # 32x32 -> 64x64
 ]
 
 
